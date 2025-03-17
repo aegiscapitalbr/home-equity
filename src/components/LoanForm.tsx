@@ -194,9 +194,8 @@ export function LoanForm() {
 
       if (!formData["Valor do imóvel"] || valorImovel === 0) {
         errors["Valor do imóvel"] = "Valor do imóvel é obrigatório";
-      } else if (valorImovel < 150000) {
-        errors["Valor do imóvel"] = "O valor do imóvel não pode ser menor que R$ 150.000";
       }
+
       if (!formData["Quanto você precisa?"] || valorEmprestimo === 0) {
         errors["Quanto você precisa?"] = "Valor do empréstimo é obrigatório";
       } else if (valorEmprestimo < 50000) {
@@ -293,36 +292,51 @@ export function LoanForm() {
         });
 
         const dealData = await dealResponse.json();
-        if (dealData.success) {
-          Swal.fire({
-            background: "rgba(18, 18, 18, 0.95)",
-            backdrop: `
-            rgba(15, 15, 15, 0.8)
-            left top
-            no-repeat
-          `,
-            customClass: {
-              popup: "rounded-2xl border border-[#1a1a1a] shadow-2xl",
-              title: "text-white",
-              htmlContainer: "text-gray-300",
-            },
-            title: `<span style="color: #ffcf02;">Parabéns! Sua solicitação</span><br><span style="color: #ffcf02;">foi recebida com sucesso.</span>`,
-            html: `
-            📩 Seu pedido está agora na fila prioritária para análise.<br><br>
-            Um de nossos especialistas já começou a trabalhar na melhor proposta para você e entrará em contato em breve.<br><br>
-            <strong style="color: #ffcf02;">Fique atento ao seu WhatsApp e e-mail.</strong><br>
-            Em alguns instantes te enviaremos uma mensagem para agendarmos uma reunião para conversarmos sobre sua solicitação, ok?
-          `,
-            icon: "success",
-            confirmButtonText: "Fechar",
-            confirmButtonColor: "#ffcf02",
-            iconColor: "#ffcf02",
-          }).then(() => {
-            location.reload();
-          });
-        } else {
-          throw new Error(dealData.error || "Erro ao criar o deal");
+
+        if (!dealData.success || !dealData.data) throw new Error("");
+
+        const valorImovel = Number(formData["Valor do imóvel"].replace(/[^\d]/g, ""));
+
+        const possuiMatricula = formData["Possui matrícula do bem?"] === "Não";
+        const tiposInvalidos = ["Chácara", "Fazenda", "Sítio", "Hotel"];
+        const tipoImovelInvalido = tiposInvalidos.includes(formData["Qual o tipo de Imóvel?"]);
+
+        if (valorImovel < 110000 || possuiMatricula || tipoImovelInvalido) {
+          if (dealData?.data?.id) {
+            await fetch(`https://api.pipedrive.com/v1/deals/${dealData.data.id}?api_token=${config.pipedrive_token}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status: "lost" }),
+            });
+          } else {
+            console.error("Erro: ID do deal não encontrado.");
+          }
         }
+
+        Swal.fire({
+          background: "rgba(18, 18, 18, 0.95)",
+          backdrop: `
+      rgba(15, 15, 15, 0.8)
+      left top
+      no-repeat
+    `,
+          customClass: {
+            popup: "rounded-2xl border border-[#1a1a1a] shadow-2xl",
+            title: "text-white",
+            htmlContainer: "text-gray-300",
+          },
+          title: `<span style="color: #ffcf02;">Parabéns! Sua solicitação</span><br><span style="color: #ffcf02;">foi recebida com sucesso.</span>`,
+          html: `
+      📩 Seu pedido está agora na fila prioritária para análise.<br><br>
+      Um de nossos especialistas já começou a trabalhar na melhor proposta para você e entrará em contato em breve.<br><br>
+      <strong style="color: #ffcf02;">Fique atento ao seu WhatsApp e e-mail.</strong><br>
+      Em alguns instantes te enviaremos uma mensagem para agendarmos uma reunião para conversarmos sobre sua solicitação, ok?
+    `,
+          icon: "success",
+          confirmButtonText: "Fechar",
+          confirmButtonColor: "#ffcf02",
+          iconColor: "#ffcf02",
+        });
       } catch (error) {
         console.error("Erro:", error);
         Swal.fire({
