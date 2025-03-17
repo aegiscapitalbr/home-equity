@@ -317,6 +317,8 @@ export function LoanForm() {
             confirmButtonText: "Fechar",
             confirmButtonColor: "#ffcf02",
             iconColor: "#ffcf02",
+          }).then(() => {
+            location.reload();
           });
         } else {
           throw new Error(dealData.error || "Erro ao criar o deal");
