@@ -295,7 +295,7 @@ export function LoanForm() {
 
         if (!dealData.success || !dealData.data) throw new Error("");
 
-        const valorImovel = Number(formData["Valor do imóvel"].replace(/[^\d]/g, ""));
+        const valorImovel = Math.floor(Number(formData["Valor do imóvel"].replace(/[^\d]/g, "")) / 100);
 
         const possuiMatricula = formData["Possui matrícula do bem?"] === "Não";
         const tiposInvalidos = ["Chácara", "Fazenda", "Sítio", "Hotel"];
@@ -306,7 +306,7 @@ export function LoanForm() {
           let motivoPerda = "";
 
           if (valorImovel < 110000) {
-            motivoPerda = `Valor do imóvel abaixo do mínimo: ${formData["Valor do imóvel"]}`;
+            motivoPerda = `Valor do imóvel abaixo do mínimo`;
           } else if (possuiMatricula) {
             motivoPerda = "Imóvel não possui matrícula";
           } else if (tipoImovelInvalido) {
@@ -347,6 +347,30 @@ export function LoanForm() {
           confirmButtonText: "Fechar",
           confirmButtonColor: "#ffcf02",
           iconColor: "#ffcf02",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            setCurrentStep(1);
+            setFormData({
+              Nome: "",
+              Email: "",
+              WhatsApp: "",
+              "Estado Civil": "",
+              CPF: "",
+              "Valor do imóvel": "",
+              "Quanto você precisa?": "",
+              "Prazo (em meses): {value}": "12",
+              "Em quanto tempo pretende realizar a operação?": "",
+              "CEP do imóvel em garantia": "",
+              Profissão: "",
+              "Renda bruta mensal": "",
+              "Possui automóvel?": "",
+              "Qual o tipo de Imóvel?": "",
+              "Imóvel dentro de condomínio?": "",
+              "Possui matrícula do bem?": "",
+              "Imóvel próprio, de um familiar ou de terceiros?": "",
+              "O imóvel está quitado?": "",
+            });
+          }
         });
       } catch (error) {
         console.error("Erro:", error);
