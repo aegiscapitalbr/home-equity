@@ -300,16 +300,27 @@ export function LoanForm() {
         const possuiMatricula = formData["Possui matrícula do bem?"] === "Não";
         const tiposInvalidos = ["Chácara", "Fazenda", "Sítio", "Hotel"];
         const tipoImovelInvalido = tiposInvalidos.includes(formData["Qual o tipo de Imóvel?"]);
+        const pretencao = formData["Em quanto tempo pretende realizar a operação?"] === "Acima de 3 meses";
 
-        if (valorImovel < 110000 || possuiMatricula || tipoImovelInvalido) {
-          if (dealData?.data?.id) {
+        if (dealData?.data?.id) {
+          let motivoPerda = "";
+
+          if (valorImovel < 110000) {
+            motivoPerda = `Valor do imóvel abaixo do mínimo: ${formData["Valor do imóvel"]}`;
+          } else if (possuiMatricula) {
+            motivoPerda = "Imóvel não possui matrícula";
+          } else if (tipoImovelInvalido) {
+            motivoPerda = `Tipo de imóvel inválido: ${formData["Qual o tipo de Imóvel?"]}`;
+          } else if (pretencao) {
+            motivoPerda = `Pretensão do cliente não atende os requisitos: "Acima de 3 meses"`;
+          }
+
+          if (motivoPerda) {
             await fetch(`https://api.pipedrive.com/v1/deals/${dealData.data.id}?api_token=${config.pipedrive_token}`, {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ status: "lost" }),
+              body: JSON.stringify({ status: "lost", lost_reason: motivoPerda }),
             });
-          } else {
-            console.error("Erro: ID do deal não encontrado.");
           }
         }
 
