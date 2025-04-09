@@ -6,6 +6,7 @@ import { FormField } from "./FormFields";
 import { Loader2 } from "lucide-react";
 import { useApp } from "../contexts/app.context";
 import { config, getNextUserId } from "../config/config";
+import { v4 as uuid } from "uuid";
 
 interface Field {
   label: string;
@@ -31,6 +32,7 @@ interface Step {
 const buttons = ["Voltar", "Continuar", "Editar dados", "Simular meu Crédito"];
 export function LoanForm() {
   const { formData, setFormData } = useApp();
+  const [id] = useState(uuid());
   const steps: Step[] = [
     {
       step: 1,
@@ -209,22 +211,27 @@ export function LoanForm() {
     return Object.keys(errors).length === 0;
   };
 
+  const updateProgressForm = (step: number) => {
+    fetch("https://hook.us2.make.com/g37sfs23xpca807alcy1tbv9oudflse6", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ step, id, formData }),
+    });
+  };
   const handleNavigation = async (action: string) => {
     if (action === buttons[1] && !validateStep(currentStep)) {
       return;
     }
 
     if (action === buttons[0] && currentStep > 1) {
-      // Voltar
       setCurrentStep((prev) => prev - 1);
     } else if (action === buttons[1] && currentStep < steps.length) {
-      // Continuar
+      updateProgressForm(currentStep);
       setCurrentStep((prev) => prev + 1);
     } else if (action === buttons[2]) {
-      // Editar dados
       setCurrentStep(1);
     } else if (action === buttons[3]) {
-      // Finalizar
+      updateProgressForm(currentStep);
       setIsSubmitting(true);
 
       const prazoEmMeses = parseInt(formData["Prazo (em meses)"], 10) || 0;
