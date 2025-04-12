@@ -394,8 +394,8 @@ export function LoanForm() {
         const valorImovel = Math.floor(Number(formData["Valor do imóvel"].replace(/[^\d]/g, "")) / 100);
 
         const possuiMatricula = formData["Possui matrícula do bem?"] === "Não";
-        const tiposInvalidos = ["Chácara/Sítio", "Fazenda", "Hotel"];
-        const tipoImovelInvalido = tiposInvalidos.includes(formData["Qual o tipo de Imóvel?"]);
+        const tiposInvalidos = ["Chácara/Sítio", "Fazenda"];
+        const tipoImovelInvalido = tiposInvalidos.includes(formData["Qual o tipo de Imóvel?"]) && formData["É produtivo?"] !== "Sim";
         const pretencao = formData["Em quanto tempo pretende realizar a operação?"] === "Acima de 3 meses";
 
         if (dealData?.data?.id) {
