@@ -301,7 +301,7 @@ export function LoanForm() {
     fetch("https://hook.us2.make.com/g37sfs23xpca807alcy1tbv9oudflse6", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ step, id, formData }),
+      body: JSON.stringify({ step, id, formData: { ...formData, "Imóvel próprio, de um familiar ou de terceiros?": formData["Imóvel próprio, de um familiar ou de terceiros?"] } }),
     });
   };
 
