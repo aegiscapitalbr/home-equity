@@ -13,6 +13,7 @@ interface FormFieldProps {
   value?: string;
   icon?: string;
   description?: string;
+  hidden?: boolean;
   onChange: (value: string) => void;
 }
 
@@ -30,7 +31,7 @@ const iconMap = {
   check: Check,
 };
 
-export function FormField({ label, type, placeholder, options, min, max, defaultValue, value, icon, description, error, onChange }: FormFieldProps) {
+export function FormField({ label, type, placeholder, options, min, max, defaultValue, value, icon, description, error, onChange, hidden }: FormFieldProps) {
   console.log(error);
   const IconComponent = icon ? iconMap[icon as keyof typeof iconMap] : null;
 
@@ -170,8 +171,10 @@ export function FormField({ label, type, placeholder, options, min, max, default
 
   if (type === "radio") {
     return (
-      <div className="space-y-4">
-        <label className="block text-sm font-medium text-gray-300">{label}</label>
+      <div className={`space-y-4 ${hidden && "hidden"}`}>
+        <label className="block text-sm font-medium text-gray-300">
+          {label} <span className="text-red-500 ml-1">*</span>
+        </label>
         {description && <p className="text-sm text-gray-500">{description}</p>}
         <div className="grid gap-3">
           {options?.map((option) => (

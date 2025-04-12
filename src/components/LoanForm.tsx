@@ -20,6 +20,7 @@ interface Field {
   description?: string;
   value?: string;
   icon?: string;
+  hidden?: boolean;
 }
 
 interface Step {
@@ -80,7 +81,7 @@ export function LoanForm() {
         { label: "Renda bruta mensal", type: "currency", placeholder: "R$ 0,00" },
         {
           label: "Possui automóvel?",
-          type: "select",
+          type: "radio",
           placeholder: "Selecione uma opção",
           options: ["Sim", "Não"],
         },
@@ -91,25 +92,13 @@ export function LoanForm() {
       progress: "80%",
       fields: [
         {
-          label: "Imóvel dentro de condomínio?",
-          type: "select",
-          placeholder: "Selecione uma opção",
-          options: ["Sim", "Não"],
-        },
-        {
-          label: "Possui matrícula do bem?",
-          type: "select",
-          placeholder: "Selecione uma opção",
-          options: ["Sim", "Não"],
-        },
-        {
           label: "Qual o tipo de Imóvel?",
           type: "select",
           placeholder: "Selecione o tipo de imóvel",
-          options: ["Apartamento", "Casa", "Terreno", "Galpão", "Sala comercial", "Chácara", "Fazenda", "Sítio", "Hotel"],
+          options: ["Apartamento", "Casa", "Terreno", "Galpão", "Sala comercial", "Chácara/Sítio", "Fazenda", "Hotel"],
         },
         {
-          label: "O imóvel é próprio ou de outra pessoa?",
+          label: "Imóvel próprio, de um familiar ou de terceiros?",
           type: "select",
           placeholder: "Selecione o tipo de propriedade",
           options: ["Próprio", "De terceiros", "Familiar"],
@@ -119,6 +108,25 @@ export function LoanForm() {
           type: "select",
           placeholder: "Selecione uma opção",
           options: ["Sim", "Não", "Ainda financiado"],
+        },
+        {
+          label: "Imóvel dentro de condomínio?",
+          type: "radio",
+          placeholder: "Selecione uma opção",
+          options: ["Sim", "Não"],
+        },
+        {
+          label: "Possui matrícula do bem?",
+          type: "radio",
+          placeholder: "Selecione uma opção",
+          options: ["Sim", "Não"],
+        },
+        {
+          label: "É produtivo?",
+          type: "radio",
+          placeholder: "Selecione o tipo de imóvel",
+          options: ["Sim", "Não"],
+          hidden: !["Chácara/Sítio", "Fazenda"].includes(formData["Qual o tipo de Imóvel?"]),
         },
       ],
     },
@@ -138,7 +146,7 @@ export function LoanForm() {
         { label: "Renda mensal", type: "text", value: `R$ ${formData["Renda bruta mensal"]}`, icon: "credit-card" },
         { label: "Possui automóvel", type: "text", value: `${formData["Possui automóvel?"]}`, icon: "credit-card" },
         { label: "Tipo de imóvel", type: "text", value: formData["Qual o tipo de Imóvel?"], icon: "home" },
-        { label: "Propriedade", type: "text", value: formData["O imóvel é próprio ou de outra pessoa?"], icon: "key" },
+        { label: "Propriedade", type: "text", value: formData["Imóvel próprio, de um familiar ou de terceiros?"], icon: "key" },
         { label: "Imóvel dentro de condomínio", type: "text", value: formData["Imóvel dentro de condomínio?"], icon: "check" },
         { label: "Possui matrícula do bem", type: "text", value: formData["Possui matrícula do bem?"], icon: "check" },
         { label: "Imóvel quitado", type: "text", value: formData["O imóvel está quitado?"], icon: "check" },
@@ -147,7 +155,7 @@ export function LoanForm() {
     },
   ];
 
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(5);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
@@ -273,12 +281,16 @@ export function LoanForm() {
         errors["Qual o tipo de Imóvel?"] = "Campo obrigatório";
       }
 
-      if (!formData["O imóvel é próprio ou de outra pessoa?"]?.trim()) {
-        errors["O imóvel é próprio ou de outra pessoa?"] = "Campo obrigatório";
+      if (!formData["Imóvel próprio, de um familiar ou de terceiros?"]?.trim()) {
+        errors["Imóvel próprio, de um familiar ou de terceiros?"] = "Campo obrigatório";
       }
 
       if (!formData["O imóvel está quitado?"]?.trim()) {
         errors["O imóvel está quitado?"] = "Campo obrigatório";
+      }
+
+      if (!formData["É produtivo?"]?.trim() && ["Chácara/Sítio", "Fazenda"].includes(formData["Qual o tipo de Imóvel?"])) {
+        errors["É produtivo?"] = "Campo obrigatório";
       }
     }
     setFormErrors(errors);
@@ -364,7 +376,7 @@ export function LoanForm() {
             f24f1418e6dfb7deb9fb6baca597e4deeaef1b85: formData["Nome"],
             "922629a6a36fdab948fcd17ae6d915d636a5b23f": formData["Profissão"],
             "3700c165d0ef33d1455a460531332e955a2a0d7d": formData["Qual o tipo de Imóvel?"],
-            "6a2483ff832b3e391cbcea435d34a993110cd12a": formData["O imóvel é próprio ou de outra pessoa?"],
+            "6a2483ff832b3e391cbcea435d34a993110cd12a": formData["Imóvel próprio, de um familiar ou de terceiros?"],
             "995e8ee3943f3fa0e97deffa299732acc5eee63c": formData["O imóvel está quitado?"],
             b65bbab60b30afb1847d15f7ce8633244c52b1a3: formData["WhatsApp"],
             "7fc0134ddd798b44ded72270ada70b0a14d3f532": formData["Possui automóvel?"],
@@ -382,7 +394,7 @@ export function LoanForm() {
         const valorImovel = Math.floor(Number(formData["Valor do imóvel"].replace(/[^\d]/g, "")) / 100);
 
         const possuiMatricula = formData["Possui matrícula do bem?"] === "Não";
-        const tiposInvalidos = ["Chácara", "Fazenda", "Sítio", "Hotel"];
+        const tiposInvalidos = ["Chácara/Sítio", "Fazenda", "Hotel"];
         const tipoImovelInvalido = tiposInvalidos.includes(formData["Qual o tipo de Imóvel?"]);
         const pretencao = formData["Em quanto tempo pretende realizar a operação?"] === "Acima de 3 meses";
 
