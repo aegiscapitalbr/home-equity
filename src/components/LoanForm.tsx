@@ -43,7 +43,7 @@ export function LoanForm() {
         { label: "WhatsApp", type: "phone", placeholder: "(00) 00000-0000" },
         { label: "CPF", type: "CPF", placeholder: "000.000.000-00" },
         {
-          label: "Estado civil",
+          label: "Estado Civil",
           type: "select",
           placeholder: "Selecione uma opção",
           options: ["Solteiro (a)", "Casado (a)", "Divorciado (a)", "Viúvo (a)"],
@@ -168,6 +168,27 @@ export function LoanForm() {
 
   const currentStepData = steps.find((s) => s.step === currentStep);
 
+  function validarCPF(cpf: string): boolean {
+    cpf = cpf.replace(/[^\d]+/g, "");
+    if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
+
+    let soma = 0;
+    for (let i = 0; i < 9; i++) {
+      soma += parseInt(cpf.charAt(i)) * (10 - i);
+    }
+    let resto = 11 - (soma % 11);
+    if (resto === 10 || resto === 11) resto = 0;
+    if (resto !== parseInt(cpf.charAt(9))) return false;
+
+    soma = 0;
+    for (let i = 0; i < 10; i++) {
+      soma += parseInt(cpf.charAt(i)) * (11 - i);
+    }
+    resto = 11 - (soma % 11);
+    if (resto === 10 || resto === 11) resto = 0;
+    return resto === parseInt(cpf.charAt(10));
+  }
+
   const validateStep = (step: number): boolean => {
     const errors: Record<string, string> = {};
 
@@ -185,8 +206,15 @@ export function LoanForm() {
       } else if (formData["WhatsApp"].replace(/\D/g, "").length !== 11) {
         errors["WhatsApp"] = "WhatsApp inválido";
       }
-      if (!formData["Estado civil"]?.trim()) {
-        errors["Estado civil"] = "Estado civil é obrigatório";
+
+      if (!formData["CPF"]?.trim()) {
+        errors["CPF"] = "CPF é obrigatório";
+      } else if (!validarCPF(formData["CPF"])) {
+        errors["CPF"] = "CPF inválido";
+      }
+
+      if (!formData["Estado Civil"]?.trim()) {
+        errors["Estado Civil"] = "Estado Civil é obrigatório";
       }
     }
 
@@ -207,6 +235,52 @@ export function LoanForm() {
       }
     }
 
+    if (step === 3 && !formData["Em quanto tempo pretende realizar a operação?"]?.trim()) {
+      errors["Em quanto tempo pretende realizar a operação?"] = "Selecione uma opção";
+    }
+
+    if (step === 4) {
+      if (!formData["CEP do imóvel em garantia"]?.trim()) {
+        errors["CEP do imóvel em garantia"] = "CEP é obrigatório";
+      } else if (!/^\d{5}-\d{3}$/.test(formData["CEP do imóvel em garantia"])) {
+        errors["CEP do imóvel em garantia"] = "CEP inválido";
+      }
+
+      if (!formData["Profissão"]?.trim()) {
+        errors["Profissão"] = "Profissão é obrigatória";
+      }
+
+      const renda = parseFloat(formData["Renda bruta mensal"]?.replace(/[^\d,]/g, "").replace(",", ".") || "0");
+      if (!formData["Renda bruta mensal"] || renda === 0) {
+        errors["Renda bruta mensal"] = "Renda bruta mensal é obrigatória";
+      }
+
+      if (!formData["Possui automóvel?"]?.trim()) {
+        errors["Possui automóvel?"] = "Campo obrigatório";
+      }
+    }
+
+    if (step === 5) {
+      if (!formData["Imóvel dentro de condomínio?"]?.trim()) {
+        errors["Imóvel dentro de condomínio?"] = "Campo obrigatório";
+      }
+
+      if (!formData["Possui matrícula do bem?"]?.trim()) {
+        errors["Possui matrícula do bem?"] = "Campo obrigatório";
+      }
+
+      if (!formData["Qual o tipo de Imóvel?"]?.trim()) {
+        errors["Qual o tipo de Imóvel?"] = "Campo obrigatório";
+      }
+
+      if (!formData["O imóvel é próprio ou de outra pessoa?"]?.trim()) {
+        errors["O imóvel é próprio ou de outra pessoa?"] = "Campo obrigatório";
+      }
+
+      if (!formData["O imóvel está quitado?"]?.trim()) {
+        errors["O imóvel está quitado?"] = "Campo obrigatório";
+      }
+    }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -218,8 +292,11 @@ export function LoanForm() {
       body: JSON.stringify({ step, id, formData }),
     });
   };
+
   const handleNavigation = async (action: string) => {
     if (action === buttons[1] && !validateStep(currentStep)) {
+      console.log(buttons[1], !validateStep(currentStep));
+
       return;
     }
 
@@ -293,8 +370,8 @@ export function LoanForm() {
             "7fc0134ddd798b44ded72270ada70b0a14d3f532": formData["Possui automóvel?"],
             "275b2d937b84a2fd4aa52cb48b3a38d505601364": formData["Possui matrícula do bem?"],
             f3ff35d4accc677cf3a5aa0c0344962262caccc1: formData["Imóvel dentro de condomínio?"],
-            "89a256c9584e7de24f782d7d8db3cf74f08b1592": formData["Estado civil"],
-            "362e7ca04fcc94ae277d49d052423a77da7c4d28": formData["CPF"],
+            "89a256c9584e7de24f782d7d8db3cf74f08b1592": formData["Estado Civil"],
+            "750aad2adf5476746e148c944264251893370e5f": formData["CPF"],
           }),
         });
 

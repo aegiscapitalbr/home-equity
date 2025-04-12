@@ -31,6 +31,7 @@ const iconMap = {
 };
 
 export function FormField({ label, type, placeholder, options, min, max, defaultValue, value, icon, description, error, onChange }: FormFieldProps) {
+  console.log(error);
   const IconComponent = icon ? iconMap[icon as keyof typeof iconMap] : null;
 
   const formatCurrency = (value: string) => {
@@ -189,6 +190,7 @@ export function FormField({ label, type, placeholder, options, min, max, default
               </div>
             </label>
           ))}
+          {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
         </div>
       </div>
     );
@@ -197,7 +199,9 @@ export function FormField({ label, type, placeholder, options, min, max, default
   if (type === "select") {
     return (
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-300">{label}</label>
+        <label className="block text-sm font-medium text-gray-300">
+          {label} <span className="text-red-500 ml-1">*</span>
+        </label>
         <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full px-4 py-3 bg-[#0f0f0f] rounded-lg border border-[#1a1a1a] focus:border-[#ffcf02] focus:ring-1 focus:ring-[#ffcf02] text-white">
           <option value="">{placeholder}</option>
           {options?.map((option) => (
@@ -206,6 +210,7 @@ export function FormField({ label, type, placeholder, options, min, max, default
             </option>
           ))}
         </select>
+        {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
       </div>
     );
   }
