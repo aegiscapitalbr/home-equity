@@ -43,12 +43,13 @@ export function LoanForm() {
         { label: "Email", type: "email", placeholder: "seu@email.com" },
         { label: "WhatsApp", type: "phone", placeholder: "(00) 00000-0000" },
         { label: "CPF", type: "CPF", placeholder: "000.000.000-00" },
-        {
-          label: "Estado Civil",
-          type: "select",
-          placeholder: "Selecione uma opção",
-          options: ["Solteiro (a)", "Casado (a)", "Divorciado (a)", "Viúvo (a)"],
-        },
+        { label: "Data de Nascimento", type: "date", placeholder: "01/01/2000" },
+        { label: "Estado Civil", type: "select", placeholder: "Selecione uma opção", options: ["Solteiro (a)", "Casado (a)", "Divorciado (a)", "Viúvo (a)"] },
+        { label: "Nome do Cônjuge", type: "text", placeholder: "Seu nome completo", hidden: formData["Estado Civil"] !== "Casado (a)" },
+        { label: "CPF do Cônjuge", type: "CPF", placeholder: "000.000.000-00", hidden: formData["Estado Civil"] !== "Casado (a)" },
+        { label: "Data de Nascimento do Cônjuge", type: "date", placeholder: "01/01/2000", hidden: formData["Estado Civil"] !== "Casado (a)" },
+        { label: "Profissão do Cônjuge", type: "text", placeholder: "Sua profissão", hidden: formData["Estado Civil"] !== "Casado (a)" },
+        { label: "Renda bruta mensal do Cônjuge", type: "currency", placeholder: "R$ 0,00", hidden: formData["Estado Civil"] !== "Casado (a)" },
       ],
     },
     {
@@ -141,6 +142,7 @@ export function LoanForm() {
         { label: "CEP", type: "text", value: formData["CEP do imóvel em garantia"], icon: "map" },
         { label: "Nome completo", type: "text", value: formData["Nome"], icon: "user" },
         { label: "CPF", type: "text", value: formData["CPF"], icon: "user" },
+        { label: "Data de Nascimento", type: "text", value: formData["Data de Nascimento"], icon: "bake" },
         { label: "WhatsApp", type: "text", value: formData["WhatsApp"], icon: "phone" },
         { label: "Profissão", type: "text", value: formData["Profissão"], icon: "briefcase" },
         { label: "Renda mensal", type: "text", value: `R$ ${formData["Renda bruta mensal"]}`, icon: "credit-card" },
@@ -224,6 +226,62 @@ export function LoanForm() {
       if (!formData["Estado Civil"]?.trim()) {
         errors["Estado Civil"] = "Estado Civil é obrigatório";
       }
+
+      const birthDateStr = formData["Data de Nascimento"];
+      if (!birthDateStr?.trim()) {
+        errors["Data de Nascimento"] = "Data de Nascimento é obrigatória";
+      } else {
+        const birthDate = new Date(birthDateStr);
+        const today = new Date();
+        const age = today.getFullYear() - birthDate.getFullYear();
+        const hasHadBirthdayThisYear = today.getMonth() > birthDate.getMonth() || (today.getMonth() === birthDate.getMonth() && today.getDate() >= birthDate.getDate());
+
+        const isOver18 = age > 18 || (age === 18 && hasHadBirthdayThisYear);
+
+        if (!isOver18) {
+          errors["Data de Nascimento"] = "Você deve ter pelo menos 18 anos";
+        }
+      }
+
+      if (formData["Estado Civil"] === "Casado (a)") {
+        if (!formData["Nome do Cônjuge"]?.trim()) {
+          errors["Nome do Cônjuge"] = "Nome do Cônjuge é obrigatório";
+        }
+
+        if (!formData["CPF do Cônjuge"]?.trim()) {
+          errors["CPF do Cônjuge"] = "CPF do Cônjuge é obrigatório";
+        } else if (!/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(formData["CPF do Cônjuge"])) {
+          errors["CPF do Cônjuge"] = "CPF do Cônjuge inválido";
+        }
+
+        const spouseBirth = formData["Data de Nascimento do Cônjuge"];
+        if (!spouseBirth?.trim()) {
+          errors["Data de Nascimento do Cônjuge"] = "Data de Nascimento do Cônjuge é obrigatória";
+        } else {
+          const birthDate = new Date(spouseBirth);
+          const today = new Date();
+          const age = today.getFullYear() - birthDate.getFullYear();
+          const hasHadBirthdayThisYear = today.getMonth() > birthDate.getMonth() || (today.getMonth() === birthDate.getMonth() && today.getDate() >= birthDate.getDate());
+
+          const isOver18 = age > 18 || (age === 18 && hasHadBirthdayThisYear);
+
+          if (!isOver18) {
+            errors["Data de Nascimento do Cônjuge"] = "O cônjuge deve ter pelo menos 18 anos";
+          }
+        }
+
+        if (formData["Profissão do Cônjuge"] && !formData["Profissão do Cônjuge"].trim()) {
+          errors["Profissão do Cônjuge"] = "Profissão do Cônjuge inválida";
+        }
+
+        const rendaStr = formData["Renda bruta mensal do Cônjuge"]?.toString().trim();
+        if (rendaStr) {
+          const renda = parseFloat(rendaStr.replace(/[^\d,]/g, "").replace(",", "."));
+          if (isNaN(renda) || renda < 0) {
+            errors["Renda bruta mensal do Cônjuge"] = "Renda do Cônjuge inválida";
+          }
+        }
+      }
     }
 
     if (step === 2) {
@@ -306,11 +364,7 @@ export function LoanForm() {
   };
 
   const handleNavigation = async (action: string) => {
-    if (action === buttons[1] && !validateStep(currentStep)) {
-      console.log(buttons[1], !validateStep(currentStep));
-
-      return;
-    }
+    if (action === buttons[1] && !validateStep(currentStep)) return;
 
     if (action === buttons[0] && currentStep > 1) {
       setCurrentStep((prev) => prev - 1);

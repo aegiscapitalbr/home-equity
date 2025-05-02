@@ -32,7 +32,7 @@ const iconMap = {
 };
 
 export function FormField({ label, type, placeholder, options, min, max, defaultValue, value, icon, description, error, onChange, hidden }: FormFieldProps) {
-  console.log(error);
+  if (hidden) return
   const IconComponent = icon ? iconMap[icon as keyof typeof iconMap] : null;
 
   const formatCurrency = (value: string) => {
@@ -243,7 +243,18 @@ export function FormField({ label, type, placeholder, options, min, max, default
       </div>
     );
   }
-
+  if (type === "date") {
+    return (
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-300">
+          {label}
+          <span className="text-red-500 ml-1">*</span>
+        </label>
+        <input type="date" required value={value || ""} onChange={(e) => onChange(e.target.value)} className={`w-full px-4 py-3 bg-[#0f0f0f] rounded-lg border ${error ? "border-red-500" : "border-[#1a1a1a]"} focus:border-[#ffcf02] focus:ring-1 focus:ring-[#ffcf02] text-white placeholder-gray-500`} />
+        {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+      </div>
+    );
+  }
   if (value !== undefined) {
     return (
       <div className="flex items-center gap-4 p-5 bg-[#121212] rounded-xl border border-[#1a1a1a] hover:border-[#ffcf02] transition-all duration-200 group hover:shadow-lg hover:shadow-[#ffcf02]/5">
