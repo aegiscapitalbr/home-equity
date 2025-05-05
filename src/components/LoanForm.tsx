@@ -383,67 +383,47 @@ export function LoanForm() {
       const dataFormatada = dataAtual.toISOString().split("T")[0];
 
       try {
-        let personId = null;
+        let contactId = null;
         const email = formData["Email"];
 
-        const personResponse = await fetch(`https://api.pipedrive.com/v1/persons/search?term=${email}&api_token=${config.pipedrive_token}`);
-        const personData = await personResponse.json();
-
-        if (personData.success && personData.data.items.length > 0) {
-          personId = personData.data.items[0].item.id;
-        } else {
-          const createPersonResponse = await fetch(`https://api.pipedrive.com/v1/persons?api_token=${config.pipedrive_token}`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              name: formData["Nome"],
-              email: [{ value: email, primary: true }],
-              phone: [{ value: formData["WhatsApp"], primary: true }],
-            }),
-          });
-          const newPersonData = await createPersonResponse.json();
-          if (newPersonData.success) {
-            personId = newPersonData.data.id;
-          } else {
-            throw new Error("Erro ao criar a pessoa no Pipedrive.");
-          }
-        }
-        const dealResponse = await fetch(`https://api.pipedrive.com/v1/deals?api_token=${config.pipedrive_token}`, {
+        const contactSearchResponse = await fetch(`${config.bitrix_webhook_url}/crm.contact.list.json`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            title: `${formData["Nome"]} ${formData["Quanto você precisa?"]}`,
-            person_id: personId,
-            pipeline_id: 3,
-            stage_id: 12,
-            user_id: getNextUserId(),
-            value: formData["Quanto você precisa?"].replace(/R\$\s*/, "").trim(),
-            "58042a4bdb39042817b04f77e050d691d7bc8b72": formData["Valor do imóvel"].replace(/R\$\s*/, "").trim(),
-            "6b3d49d313f2231e27992a84ba764e8096ec424d": formData["Renda bruta mensal"].replace(/R\$\s*/, "").trim(),
-            "69045690e3ccfde9c40cbfd73ababb85f62af758": dataFormatada,
-            ef706a49485679faccd081a80ee6e50c71a22988: formData["Em quanto tempo pretende realizar a operação?"],
-            "79bf1a965f730ee789724aecf49bebc9bd1b8c58": formData["CEP do imóvel em garantia"],
-            f24f1418e6dfb7deb9fb6baca597e4deeaef1b85: formData["Nome"],
-            "922629a6a36fdab948fcd17ae6d915d636a5b23f": formData["Profissão"],
-            "3700c165d0ef33d1455a460531332e955a2a0d7d": formData["Qual o tipo de Imóvel?"],
-            "6a2483ff832b3e391cbcea435d34a993110cd12a": formData["Imóvel próprio, de um familiar ou de terceiros?"],
-            "995e8ee3943f3fa0e97deffa299732acc5eee63c": formData["O imóvel está quitado?"],
-            b65bbab60b30afb1847d15f7ce8633244c52b1a3: formData["WhatsApp"],
-            "7fc0134ddd798b44ded72270ada70b0a14d3f532": formData["Possui automóvel?"],
-            "275b2d937b84a2fd4aa52cb48b3a38d505601364": formData["Possui matrícula do bem?"],
-            f3ff35d4accc677cf3a5aa0c0344962262caccc1: formData["Imóvel dentro de condomínio?"],
-            "89a256c9584e7de24f782d7d8db3cf74f08b1592": formData["Estado Civil"],
-            "750aad2adf5476746e148c944264251893370e5f": formData["CPF"],
+            filter: { EMAIL: email },
+            select: ["ID"],
           }),
         });
 
-        const dealData = await dealResponse.json();
+        const contactSearchData = await contactSearchResponse.json();
 
-        if (!dealData.success || !dealData.data) throw new Error("");
+        if (contactSearchData.result && contactSearchData.result.length > 0) {
+          contactId = contactSearchData.result[0].ID;
+        } else {
+          const createContactResponse = await fetch(`${config.bitrix_webhook_url}/crm.contact.add.json`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              fields: {
+                NAME: formData["Nome"],
+                EMAIL: [{ VALUE: email, VALUE_TYPE: "WORK" }],
+                PHONE: [{ VALUE: formData["WhatsApp"].replace(/[^\d]/g, ""), VALUE_TYPE: "WORK" }],
+              },
+            }),
+          });
+
+          const createContactData = await createContactResponse.json();
+
+          if (createContactData.result) {
+            contactId = createContactData.result;
+          } else {
+            throw new Error("Erro ao criar o contato no Bitrix24.");
+          }
+        }
 
         const valorImovel = Math.floor(Number(formData["Valor do imóvel"].replace(/[^\d]/g, "")) / 100);
 
@@ -452,33 +432,64 @@ export function LoanForm() {
         const tipoImovelInvalido = tiposInvalidos.includes(formData["Qual o tipo de Imóvel?"]) && formData["É produtivo?"] !== "Sim";
         const pretencao = formData["Em quanto tempo pretende realizar a operação?"] === "Acima de 3 meses";
 
-        if (dealData?.data?.id) {
-          let motivoPerda = "";
+        let lostReason = "";
 
-          if (valorImovel < 110000) {
-            motivoPerda = `Valor do imóvel abaixo do mínimo`;
-          } else if (possuiMatricula) {
-            motivoPerda = "Imóvel não possui matrícula";
-          } else if (tipoImovelInvalido) {
-            motivoPerda = `Tipo de imóvel inválido: ${formData["Qual o tipo de Imóvel?"]}`;
-          } else if (pretencao) {
-            motivoPerda = `Pretensão do cliente não atende os requisitos: "Acima de 3 meses"`;
-          }
-
-          if (motivoPerda) {
-            await fetch(`https://api.pipedrive.com/v1/deals/${dealData.data.id}?api_token=${config.pipedrive_token}`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ status: "lost", lost_reason: motivoPerda }),
-            });
-          } else {
-            await fetch(`https://webhook.pluglead.com/webhook/9dd522bb-6943-4b57-8a28-3a88d8a537a1`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ Nome: formData["Nome"], WhatsApp: formData["WhatsApp"], Id: dealData?.data?.id }),
-            });
-          }
+        if (valorImovel < 110000) {
+          lostReason = `Valor do imóvel abaixo do mínimo`;
+        } else if (possuiMatricula) {
+          lostReason = "Imóvel não possui matrícula";
+        } else if (tipoImovelInvalido) {
+          lostReason = `Tipo de imóvel inválido: ${formData["Qual o tipo de Imóvel?"]}`;
+        } else if (pretencao) {
+          lostReason = `Pretensão do cliente não atende os requisitos: "Acima de 3 meses"`;
         }
+
+        const dealResponse = await fetch(`${config.bitrix_webhook_url}/crm.deal.add`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fields: {
+              STAGE_ID: lostReason ? "C29:NEW" : "C29:LOSE",
+              CATEGORY_ID: "29",
+              OPPORTUNITY: Math.floor(Number(formData["Quanto você precisa?"].replace(/[^\d]/g, "")) / 100) || 0,
+              CURRENCY_ID: "BRL",
+              ASSIGNED_BY_ID: getNextUserId?.() || 1,
+              CONTACT_ID: contactId,
+              TITLE: `${formData["Nome"]} - ${formData["Quanto você precisa?"]}`,
+              UF_CRM_1746308361024: formData["Valor do imóvel"]?.replace(/[^\d]/g, ""), // Valor do imóvel
+              UF_CRM_1746308334521: formData["Nome"], // Nome
+              UF_CRM_1746308508986: formData["CPF"], // CPF
+              UF_CRM_1746308493315: formData["Possui automóvel?"], // Possui automóvel?
+              UF_CRM_1746308486670: formData["Possui matrícula do bem?"], // Possui matrícula do bem?
+              UF_CRM_1746308479452: formData["Imóvel dentro de condomínio?"], // Imóvel dentro de condomínio?
+              UF_CRM_1746308458687: formData["Estado Civil"], // Estado civil
+              UF_CRM_1746308448991: formData["O imóvel está quitado?"], // Imóvel está quitado?
+              UF_CRM_1746308442412: formData["Imóvel próprio, de um familiar ou de terceiros?"], // Tipo de propriedade
+              UF_CRM_1746308425185: formData["Qual o tipo de Imóvel?"], // Tipo de imóvel
+              UF_CRM_1746308403304: formData["Profissão"], // Profissão
+              UF_CRM_1746308394572: formData["CEP do imóvel em garantia"], // CEP do imóvel
+              UF_CRM_1746308383159: formData["Em quanto tempo pretende realizar a operação?"], // Tempo para operação
+              UF_CRM_1746308369420: dataFormatada, // Prazo (em meses)
+              UF_CRM_1746388766: lostReason, // Motivo da perda
+              UF_CRM_1746308303922: formData["Email"], // Email
+              UF_CRM_1746308266058: formData["WhatsApp"], // WhatsApp
+              UF_CRM_1746308470019: formData["Renda bruta mensal"]?.replace(/[^\d]/g, ""), // Renda bruta mensal
+              UF_CRM_1746461140: formData["Data de Nascimento"], // Data de Nascimento
+
+              UF_CRM_1746461331: formData["Nome do Cônjuge"], // Nome do Cônjuge
+              UF_CRM_1746461454: formData["CPF do Cônjuge"], // CPF do Cônjuge
+              UF_CRM_1746461525: formData["Data de Nascimento do Cônjuge"], // Data de nascimento do cônjuge
+              UF_CRM_1746461571: formData["Profissão do Cônjuge"], // Profissão do cônjuge
+              UF_CRM_1746461618: formData["Renda bruta mensal do Cônjuge"]?.replace(/[^\d]/g, ""), // Renda do cônjuge
+
+              UF_CRM_PRODUTIVO: formData["É produtivo?"], // Imóvel é produtivo?
+            },
+          }),
+        });
+
+        const dealData = await dealResponse.json();
+
+        if (!dealData.result) throw new Error("");
 
         Swal.fire({
           background: "rgba(18, 18, 18, 0.95)",
@@ -505,6 +516,7 @@ export function LoanForm() {
           iconColor: "#ffcf02",
         }).then((result) => {
           if (result.isConfirmed) {
+            return;
             setCurrentStep(1);
             setFormData({
               Nome: "",
