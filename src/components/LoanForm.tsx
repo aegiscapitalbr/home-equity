@@ -440,16 +440,14 @@ export function LoanForm() {
           lostReason = "Imóvel não possui matrícula";
         } else if (tipoImovelInvalido) {
           lostReason = `Tipo de imóvel inválido: ${formData["Qual o tipo de Imóvel?"]}`;
-        } else if (pretencao) {
-          lostReason = `Pretensão do cliente não atende os requisitos: "Acima de 3 meses"`;
         }
-
+        
         const dealResponse = await fetch(`${config.bitrix_webhook_url}/crm.deal.add`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             fields: {
-              STAGE_ID: lostReason ? "C29:NEW" : "C29:LOSE",
+              STAGE_ID: !lostReason ? "C29:NEW" : "C29:LOSE",
               CATEGORY_ID: "29",
               OPPORTUNITY: Math.floor(Number(formData["Quanto você precisa?"].replace(/[^\d]/g, "")) / 100) || 0,
               CURRENCY_ID: "BRL",
